@@ -6,6 +6,7 @@ import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException
 from firebase_admin import auth, credentials
 
+
 app = FastAPI()
 
 
@@ -81,12 +82,14 @@ def health_firebase():
             "ok": True,
             "firebase": "initialized",
         }
+
     except Exception as e:
-    print(f"Firebase init error: {type(e).__name__}: {e}")
-    raise HTTPException(
-        status_code=500,
-        detail="Firebase configuration error",
-    ) 
+        print(f"Firebase init error: {type(e).__name__}: {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Firebase configuration error",
+        )
 
 
 @app.get("/me")
@@ -95,4 +98,5 @@ def me(user=Depends(verify_firebase_token)):
         "ok": True,
         "uid": user["uid"],
         "email": user.get("email"),
+    } 
     } 
