@@ -81,11 +81,12 @@ def health_firebase():
             "ok": True,
             "firebase": "initialized",
         }
-    except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Firebase configuration error",
-        )
+    except Exception as e:
+    print(f"Firebase init error: {type(e).__name__}: {e}")
+    raise HTTPException(
+        status_code=500,
+        detail="Firebase configuration error",
+    ) 
 
 
 @app.get("/me")
