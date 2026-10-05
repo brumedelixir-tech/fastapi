@@ -99,4 +99,3 @@ def me(user=Depends(verify_firebase_token)):
         "uid": user["uid"],
         "email": user.get("email"),
     } 
-    } 
