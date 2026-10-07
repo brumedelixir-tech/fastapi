@@ -6,18 +6,79 @@ import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException
 from firebase_admin import auth, credentials
 
-
 app = FastAPI()
+
+
+def get_database_url():
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is missing")
+
+    return database_url
+
+
+def init_db():
+    database_url = get_database_url()
+
+    with psycopg.connect(database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS "Utilisateur" (
+                    "idUtilisateur" TEXT PRIMARY KEY,
+                    "prenom" TEXT NOT NULL,
+                    "nom" TEXT NOT NULL,
+                    "email" TEXT NOT NULL
+                );
+                """
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS "Cabinet" (
+                    "idCabinet" TEXT PRIMARY KEY,
+                    "nomCabinet" TEXT NOT NULL,
+                    "adresseCabinet" TEXT NOT NULL
+                );
+                """
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS "AccesCabinet" (
+                    "idAcces" TEXT PRIMARY KEY,
+                    "idUtilisateur" TEXT NOT NULL
+                        REFERENCES "Utilisateur" ("idUtilisateur"),
+                    "idCabinet" TEXT NOT NULL
+                        REFERENCES "Cabinet" ("idCabinet"),
+                    "role" TEXT NOT NULL,
+                    "dateDebut" TIMESTAMPTZ NOT NULL,
+                    "dateFin" TIMESTAMPTZ,
+                    "statut" TEXT NOT NULL
+                );
+                """
+            )
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 
 def get_firebase_app():
     try:
         return firebase_admin.get_app()
+
     except ValueError:
-        service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        service_account_json = os.getenv(
+            "FIREBASE_SERVICE_ACCOUNT_JSON"
+        )
 
         if not service_account_json:
-            raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_JSON is missing")
+            raise RuntimeError(
+                "FIREBASE_SERVICE_ACCOUNT_JSON is missing"
+            )
 
         service_account = json.loads(service_account_json)
 
@@ -40,6 +101,7 @@ def verify_firebase_token(
     try:
         get_firebase_app()
         return auth.verify_id_token(token)
+
     except Exception:
         raise HTTPException(
             status_code=401,
@@ -54,13 +116,7 @@ def root():
 
 @app.get("/health-db")
 def health_db():
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        return {
-            "ok": False,
-            "database": "missing DATABASE_URL",
-        }
+    database_url = get_database_url()
 
     with psycopg.connect(database_url) as connection:
         with connection.cursor() as cursor:
@@ -84,7 +140,10 @@ def health_firebase():
         }
 
     except Exception as e:
-        print(f"Firebase init error: {type(e).__name__}: {e}")
+        print(
+            f"Firebase init error: "
+            f"{type(e).__name__}: {e}"
+        )
 
         raise HTTPException(
             status_code=500,
