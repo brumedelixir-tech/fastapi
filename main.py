@@ -158,3 +158,70 @@ def me(user=Depends(verify_firebase_token)):
         "uid": user["uid"],
         "email": user.get("email"),
     } 
+@app.get("/me/context")
+def me_context(user=Depends(verify_firebase_token)):
+    uid = user["uid"]
+    database_url = get_database_url()
+
+    with psycopg.connect(database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    "idUtilisateur",
+                    "prenom",
+                    "nom",
+                    "email"
+                FROM "Utilisateur"
+                WHERE "idUtilisateur" = %s;
+                """,
+                (uid,),
+            )
+
+            utilisateur = cursor.fetchone()
+
+            if utilisateur is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Utilisateur introuvable",
+                )
+
+            cursor.execute(
+                """
+                SELECT
+                    c."idCabinet",
+                    c."nomCabinet",
+                    c."adresseCabinet"
+                FROM "AccesCabinet" a
+                JOIN "Cabinet" c
+                    ON c."idCabinet" = a."idCabinet"
+                WHERE a."idUtilisateur" = %s
+                  AND LOWER(a."statut") = 'actif'
+                  AND a."dateDebut" <= NOW()
+                  AND (
+                      a."dateFin" IS NULL
+                      OR a."dateFin" >= NOW()
+                  )
+                ORDER BY c."nomCabinet";
+                """,
+                (uid,),
+            )
+
+            cabinets = cursor.fetchall()
+
+    return {
+        "utilisateur": {
+            "idUtilisateur": utilisateur[0],
+            "prenom": utilisateur[1],
+            "nom": utilisateur[2],
+            "email": utilisateur[3],
+        },
+        "cabinetsAccessibles": [
+            {
+                "idCabinet": cabinet[0],
+                "nomCabinet": cabinet[1],
+                "adresseCabinet": cabinet[2],
+            }
+            for cabinet in cabinets
+        ],
+    } 
