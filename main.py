@@ -277,8 +277,29 @@ def get_taches(idCabinet: str, user=Depends(verify_firebase_token)):
                     "dateCreation",
                     "idAuteurCreation",
                     "dateRealisation",
-                    "idAuteurRealisation"
-                FROM "Taches"
+                    "idAuteurRealisation",
+CASE
+    WHEN NOT "estUrgente"
+      AND "echeance" IS NOT NULL
+      AND ("echeance" AT TIME ZONE 'Europe/Paris')::date
+          < (NOW() AT TIME ZONE 'Europe/Paris')::date
+    THEN TRUE ELSE FALSE
+END AS "estEnRetard",
+CASE
+    WHEN NOT "estUrgente"
+      AND "echeance" IS NOT NULL
+      AND ("echeance" AT TIME ZONE 'Europe/Paris')::date
+          = (NOW() AT TIME ZONE 'Europe/Paris')::date
+    THEN TRUE ELSE FALSE
+END AS "estAujourdhui",
+CASE
+    WHEN NOT "estUrgente"
+      AND "echeance" IS NOT NULL
+      AND ("echeance" AT TIME ZONE 'Europe/Paris')::date
+          > (NOW() AT TIME ZONE 'Europe/Paris')::date
+    THEN TRUE ELSE FALSE
+END AS "estAVenir"
+FROM "Taches" 
                 WHERE "idCabinet" = %s
                 ORDER BY "estUrgente" DESC,
                          "echeance" ASC NULLS LAST,
@@ -302,6 +323,9 @@ def get_taches(idCabinet: str, user=Depends(verify_firebase_token)):
         "idAuteurCreation": row[8],
         "dateRealisation": row[9],
         "idAuteurRealisation": row[10],
+        "estEnRetard": row[11],
+"estAujourdhui": row[12],
+"estAVenir": row[13], 
     }
     for row in rows
 ] 
