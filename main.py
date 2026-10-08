@@ -226,4 +226,13 @@ def me_context(user=Depends(verify_firebase_token)):
         ],
         "nombreCabinetsAccessibles"
         :len(cabinets),
+        "cabinetActifAuto": (
+    {
+        "idCabinet": cabinets[0][0],
+        "nomCabinet": cabinets[0][1],
+        "adresseCabinet": cabinets[0][2],
+    }
+    if len(cabinets) == 1
+    else None
+), 
     } 
