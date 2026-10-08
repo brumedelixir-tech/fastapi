@@ -224,4 +224,6 @@ def me_context(user=Depends(verify_firebase_token)):
             }
             for cabinet in cabinets
         ],
+        "nombreCabinetsAccessibles"
+        :len(cabinets),
     } 
