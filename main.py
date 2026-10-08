@@ -289,21 +289,19 @@ def get_taches(idCabinet: str, user=Depends(verify_firebase_token)):
 
             rows = cursor.fetchall()
 
-    return {
-        "taches": [
-            {
-                "idTache": row[0],
-                "idCabinet": row[1],
-                "idPatient": row[2],
-                "libelle": row[3],
-                "echeance": row[4],
-                "estUrgente": row[5],
-                "statut": row[6],
-                "dateCreation": row[7],
-                "idAuteurCreation": row[8],
-                "dateRealisation": row[9],
-                "idAuteurRealisation": row[10],
-            }
-            for row in rows
-        ]
-    } 
+    return [
+    {
+        "idTache": row[0],
+        "idCabinet": row[1],
+        "idPatient": row[2],
+        "libelle": row[3],
+        "echeance": row[4],
+        "estUrgente": row[5],
+        "statut": row[6],
+        "dateCreation": row[7],
+        "idAuteurCreation": row[8],
+        "dateRealisation": row[9],
+        "idAuteurRealisation": row[10],
+    }
+    for row in rows
+] 
