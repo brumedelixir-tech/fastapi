@@ -236,3 +236,74 @@ def me_context(user=Depends(verify_firebase_token)):
     else None
 ), 
     } 
+
+@app.get("/taches")
+def get_taches(idCabinet: str, user=Depends(verify_firebase_token)):
+    uid = user["uid"]
+    database_url = get_database_url()
+
+    with psycopg.connect(database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM "AccesCabinet"
+                WHERE "idUtilisateur" = %s
+                  AND "idCabinet" = %s
+                  AND "statut" = 'actif'
+                  AND ("dateDebut" IS NULL OR "dateDebut" <= NOW())
+                  AND ("dateFin" IS NULL OR "dateFin" >= NOW())
+                LIMIT 1;
+                """,
+                (uid, idCabinet),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Acces refuse a ce cabinet"
+                )
+
+            cursor.execute(
+                """
+                SELECT
+                    "idTache",
+                    "idCabinet",
+                    "idPatient",
+                    "libelle",
+                    "echeance",
+                    "estUrgente",
+                    "statut",
+                    "dateCreation",
+                    "idAuteurCreation",
+                    "dateRealisation",
+                    "idAuteurRealisation"
+                FROM "Taches"
+                WHERE "idCabinet" = %s
+                ORDER BY "estUrgente" DESC,
+                         "echeance" ASC NULLS LAST,
+                         "dateCreation" DESC;
+                """,
+                (idCabinet,),
+            )
+
+            rows = cursor.fetchall()
+
+    return {
+        "taches": [
+            {
+                "idTache": row[0],
+                "idCabinet": row[1],
+                "idPatient": row[2],
+                "libelle": row[3],
+                "echeance": row[4],
+                "estUrgente": row[5],
+                "statut": row[6],
+                "dateCreation": row[7],
+                "idAuteurCreation": row[8],
+                "dateRealisation": row[9],
+                "idAuteurRealisation": row[10],
+            }
+            for row in rows
+        ]
+    } 
